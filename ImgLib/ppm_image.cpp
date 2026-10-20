@@ -58,7 +58,7 @@ Image LoadPPM(const Path& file) {
     // мы поддерживаем изображения только формата P6
     // с максимальным значением цвета 255
     if (sign != PPM_SIG || color_max != PPM_MAX
-        || w < 0 || h < 0 || color_max < 0) {
+        || w <= 0 || h <= 0 || color_max < 0) {
         return {};
     }
 
