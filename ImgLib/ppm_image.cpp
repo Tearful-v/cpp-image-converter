@@ -9,6 +9,11 @@ using namespace std;
 
 namespace img_lib {
 
+namespace {
+constexpr int BYTES_PER_PIXEL = 3;
+}  // namespace
+
+
 static const string_view PPM_SIG = "P6"sv;
 static const int PPM_MAX = 255;
 
@@ -22,16 +27,16 @@ bool SavePPM(const Path& file, const Image& image) {
 
     const int w = image.GetWidth();
     const int h = image.GetHeight();
-    std::vector<char> buff(w * 3);
+    std::vector<char> buff(w * BYTES_PER_PIXEL);
 
     for (int y = 0; y < h; ++y) {
         const Color* line = image.GetLine(y);
         for (int x = 0; x < w; ++x) {
-            buff[x * 3 + 0] = static_cast<char>(line[x].r);
-            buff[x * 3 + 1] = static_cast<char>(line[x].g);
-            buff[x * 3 + 2] = static_cast<char>(line[x].b);
+            buff[x * BYTES_PER_PIXEL + 0] = static_cast<char>(line[x].r);
+            buff[x * BYTES_PER_PIXEL + 1] = static_cast<char>(line[x].g);
+            buff[x * BYTES_PER_PIXEL + 2] = static_cast<char>(line[x].b);
         }
-        out.write(buff.data(), w * 3);
+        out.write(buff.data(), w * BYTES_PER_PIXEL);
     }
 
     return out.good();
@@ -64,18 +69,19 @@ Image LoadPPM(const Path& file) {
     }
 
     Image result(w, h, Color::Black());
-    std::vector<char> buff(w * 3);
+    std::vector<char> buff(w * BYTES_PER_PIXEL);
 
     for (int y = 0; y < h; ++y) {
         Color* line = result.GetLine(y);
-        ifs.read(buff.data(), w * 3);
+        ifs.read(buff.data(), w * BYTES_PER_PIXEL);
         if (!ifs) {
             return {};
+        }
 
         for (int x = 0; x < w; ++x) {
-            line[x].r = static_cast<byte>(buff[x * 3 + 0]);
-            line[x].g = static_cast<byte>(buff[x * 3 + 1]);
-            line[x].b = static_cast<byte>(buff[x * 3 + 2]);
+            line[x].r = static_cast<byte>(buff[x * BYTES_PER_PIXEL + 0]);
+            line[x].g = static_cast<byte>(buff[x * BYTES_PER_PIXEL + 1]);
+            line[x].b = static_cast<byte>(buff[x * BYTES_PER_PIXEL + 2]);
         }
     }
 
