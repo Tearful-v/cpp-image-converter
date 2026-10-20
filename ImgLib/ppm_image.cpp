@@ -68,6 +68,10 @@ Image LoadPPM(const Path& file) {
         return {};
     }
 
+    if (w > INT_MAX / BYTES_PER_PIXEL) {
+        return {};
+    }
+
     Image result(w, h, Color::Black());
     std::vector<char> buff(w * BYTES_PER_PIXEL);
 
