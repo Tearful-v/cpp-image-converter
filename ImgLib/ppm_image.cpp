@@ -14,6 +14,9 @@ static const int PPM_MAX = 255;
 
 bool SavePPM(const Path& file, const Image& image) {
     ofstream out(file, ios::binary);
+    if(!out) {
+        return false;
+    }
 
     out << PPM_SIG << '\n' << image.GetWidth() << ' ' << image.GetHeight() << '\n' << PPM_MAX << '\n';
 
@@ -39,7 +42,9 @@ Image LoadPPM(const Path& file) {
     // поскольку будем читать данные в двоичном формате
     ifstream ifs(file, ios::binary);
     std::string sign;
-    int w, h, color_max;
+    int w = 0;
+    int h = 0;
+    int color_max = 0;
 
     // читаем заголовок: он содержит формат, размеры изображения
     // и максимальное значение цвета
@@ -47,7 +52,8 @@ Image LoadPPM(const Path& file) {
 
     // мы поддерживаем изображения только формата P6
     // с максимальным значением цвета 255
-    if (sign != PPM_SIG || color_max != PPM_MAX) {
+    if (sign != PPM_SIG || color_max != PPM_MAX
+        || w < 0 || h < 0 || color_max < 0) {
         return {};
     }
 
@@ -63,6 +69,8 @@ Image LoadPPM(const Path& file) {
     for (int y = 0; y < h; ++y) {
         Color* line = result.GetLine(y);
         ifs.read(buff.data(), w * 3);
+        if (!ifs) {
+            return {};
 
         for (int x = 0; x < w; ++x) {
             line[x].r = static_cast<byte>(buff[x * 3 + 0]);
