@@ -11,6 +11,12 @@ using namespace std;
 
 namespace img_lib {
 
+namespace {
+constexpr int BYTES_PER_PIXEL = 3;
+constexpr int BMP_ALIGNMENT = 4;
+}  // namespace
+
+
 PACKED_STRUCT_BEGIN BitmapFileHeader {
     char signature[2] = {'B', 'M'};
     uint32_t file_size = 0;
@@ -36,7 +42,7 @@ PACKED_STRUCT_END
 
 // функция вычисления отступа по ширине
 static int GetBMPStride(int w) {
-    return 4 * ((w * 3 + 3) / 4);
+    return BMP_ALIGNMENT * ((w * BYTES_PER_PIXEL + BMP_ALIGNMENT - 1) / BMP_ALIGNMENT);
 }
 
 
@@ -72,9 +78,9 @@ bool SaveBMP(const Path& file, const Image& image) {
         const Color* line = image.GetLine(y);
 
         for (int x = 0; x < width; ++x) {
-            buff[x * 3 + 0]     = static_cast<char>(line[x].b);
-            buff[x * 3 + 1] = static_cast<char>(line[x].g);
-            buff[x * 3 + 2] = static_cast<char>(line[x].r);
+            buff[x * BYTES_PER_PIXEL + 0]     = static_cast<char>(line[x].b);
+            buff[x * BYTES_PER_PIXEL + 1] = static_cast<char>(line[x].g);
+            buff[x * BYTES_PER_PIXEL + 2] = static_cast<char>(line[x].r);
         }
 
         out.write(buff.data(), stride);
@@ -113,7 +119,7 @@ Image LoadBMP(const Path& file) {
     const int width = infheader.width;
     const int height = infheader.height;
 
-    if (width > (INT_MAX - 3) / 3) {
+    if (width > (INT_MAX - (BMP_ALIGNMENT - 1)) / BYTES_PER_PIXEL) {
         return {};
     }
 
@@ -137,9 +143,9 @@ Image LoadBMP(const Path& file) {
 
         for (int x = 0; x < width; ++x) {
             line[x] = Color{
-                static_cast<byte>(buffer[x * 3 + 2]), 
-                static_cast<byte>(buffer[x * 3 + 1]), 
-                static_cast<byte>(buffer[x * 3 + 0]),     
+                static_cast<byte>(buffer[x * BYTES_PER_PIXEL + 2]), 
+                static_cast<byte>(buffer[x * BYTES_PER_PIXEL + 1]), 
+                static_cast<byte>(buffer[x * BYTES_PER_PIXEL + 0]),     
                 byte{255}                           
             };
         }
