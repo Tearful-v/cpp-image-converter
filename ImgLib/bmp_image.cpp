@@ -1,11 +1,10 @@
 #include "bmp_image.h"
 #include "pack_defines.h"
 
-#include <array>
 #include <vector>
 #include <fstream>
-#include <string_view>
 #include <climits>
+#include <cstdint>
 
 using namespace std;
 
@@ -21,12 +20,12 @@ PACKED_STRUCT_BEGIN BitmapFileHeader {
     char signature[2] = {'B', 'M'};
     uint32_t file_size = 0;
     uint32_t reserved = 0;
-    uint32_t data_offset = 54;
+    uint32_t data_offset = 0;
 }
 PACKED_STRUCT_END
 
 PACKED_STRUCT_BEGIN BitmapInfoHeader {
-    uint32_t size = 40;
+    uint32_t size = sizeof(BitmapInfoHeader);
     int32_t width = 0;
     int32_t height = 0;
     uint16_t planes = 1;
@@ -42,7 +41,8 @@ PACKED_STRUCT_END
 
 // функция вычисления отступа по ширине
 static int GetBMPStride(int w) {
-    return BMP_ALIGNMENT * ((w * BYTES_PER_PIXEL + BMP_ALIGNMENT - 1) / BMP_ALIGNMENT);
+    return BMP_ALIGNMENT *
+        ((w * BYTES_PER_PIXEL + BMP_ALIGNMENT - 1) / BMP_ALIGNMENT);
 }
 
 
@@ -52,25 +52,25 @@ bool SaveBMP(const Path& file, const Image& image) {
         return false;
     }
 
-    BitmapFileHeader fheader;
-    BitmapInfoHeader infheader;
+    BitmapFileHeader file_header;
+    BitmapInfoHeader info_header;
 
     const int width = image.GetWidth();
     const int height = image.GetHeight();
     const int stride = GetBMPStride(width);
 
-    infheader.width = width;
-    infheader.height = height;
-    infheader.image_size = stride * height;
+    info_header.width = width;
+    info_header.height = height;
+    info_header.image_size = stride * height;
 
-    fheader.data_offset = sizeof(fheader) + sizeof(infheader);
-    fheader.file_size = fheader.data_offset + infheader.image_size;
+    file_header.data_offset = sizeof(file_header) + sizeof(info_header);
+    file_header.file_size = file_header.data_offset + info_header.image_size;
 
-    out.write(reinterpret_cast<const char*>(&fheader),
-              sizeof(fheader));
+    out.write(reinterpret_cast<const char*>(&file_header),
+              sizeof(file_header));
 
-    out.write(reinterpret_cast<const char*>(&infheader),
-              sizeof(infheader));
+    out.write(reinterpret_cast<const char*>(&info_header),
+              sizeof(info_header));
 
     std::vector<char> buff(stride, 0);
 
@@ -97,27 +97,27 @@ Image LoadBMP(const Path& file) {
         return {};
     }
 
-    BitmapFileHeader fheader;
-    BitmapInfoHeader infheader;
+    BitmapFileHeader file_header;
+    BitmapInfoHeader info_header;
 
-    in.read(reinterpret_cast<char*>(&fheader), sizeof(fheader));
-    in.read(reinterpret_cast<char*>(&infheader), sizeof(infheader));
+    in.read(reinterpret_cast<char*>(&file_header), sizeof(file_header));
+    in.read(reinterpret_cast<char*>(&info_header), sizeof(info_header));
 
     if (!in ||
-        fheader.signature[0] != 'B' ||
-        fheader.signature[1] != 'M' ||
-        infheader.size != 40 ||
-        infheader.planes != 1 ||
-        infheader.bits_per_pixel != 24 ||
-        infheader.compression != 0 ||
-        infheader.width <= 0 ||
-        infheader.height <= 0 ||
-        fheader.data_offset < sizeof(fheader) + sizeof(infheader)) {
+        file_header.signature[0] != 'B' ||
+        file_header.signature[1] != 'M' ||
+        info_header.size != sizeof(info_header) ||
+        info_header.planes != 1 ||
+        info_header.bits_per_pixel != 24 ||
+        info_header.compression != 0 ||
+        info_header.width <= 0 ||
+        info_header.height <= 0 ||
+        file_header.data_offset < sizeof(file_header) + sizeof(info_header)) {
         return {};
     }
 
-    const int width = infheader.width;
-    const int height = infheader.height;
+    const int width = info_header.width;
+    const int height = info_header.height;
 
     if (width > (INT_MAX - (BMP_ALIGNMENT - 1)) / BYTES_PER_PIXEL) {
         return {};
@@ -125,7 +125,20 @@ Image LoadBMP(const Path& file) {
 
     const int stride = GetBMPStride(width);
 
-    in.seekg(fheader.data_offset, ios::beg);
+    if (width > INT_MAX / height) {
+        return {};
+    }
+
+    in.seekg(0, ios::end);
+    const streamoff file_size = in.tellg();
+    if (!in || file_size < 0 || file_header.data_offset > file_size) {
+        return {};
+    }
+    if ((file_size - file_header.data_offset) / stride < height) {
+        return {};
+    }
+
+    in.seekg(file_header.data_offset, ios::beg);
     if (!in) {
         return {};
     }
@@ -143,10 +156,10 @@ Image LoadBMP(const Path& file) {
 
         for (int x = 0; x < width; ++x) {
             line[x] = Color{
-                static_cast<byte>(buffer[x * BYTES_PER_PIXEL + 2]), 
-                static_cast<byte>(buffer[x * BYTES_PER_PIXEL + 1]), 
-                static_cast<byte>(buffer[x * BYTES_PER_PIXEL + 0]),     
-                byte{255}                           
+                static_cast<byte>(buffer[x * BYTES_PER_PIXEL + 2]),
+                static_cast<byte>(buffer[x * BYTES_PER_PIXEL + 1]),
+                static_cast<byte>(buffer[x * BYTES_PER_PIXEL + 0]),
+                byte{255}
             };
         }
     }
