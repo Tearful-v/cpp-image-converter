@@ -93,20 +93,16 @@ bool SaveJPEG(const Path& file, const Image& image) {
     /* First we supply a description of the input image.
     * Four fields of the cinfo struct must be filled in:
     */
-    cinfo.image_width = image.GetWidth();  /* image width and height, in pixels */
+    cinfo.image_width = image.GetWidth();
     cinfo.image_height = image.GetHeight();
-    cinfo.input_components = 3;       /* # of color components per pixel */
+    cinfo.input_components = 3;
     cinfo.in_color_space = JCS_RGB;
-    std::vector<JSAMPLE> row(image.GetWidth() * 3);  /* colorspace of input image */
+    std::vector<JSAMPLE> row(image.GetWidth() * 3);
     /* Now use the library's routine to set default compression parameters.
     * (You must set at least cinfo.in_color_space before calling this,
     * since the defaults depend on the source color space.)
     */
     jpeg_set_defaults(&cinfo);
-    /* Now you can set any non-default parameters you wish to.
-    * Here we just illustrate the use of quality (quantization table) scaling:
-    */
-
     /* Step 4: Start compressor */
 
     /* TRUE ensures that we will write a complete interchange-JPEG file.
